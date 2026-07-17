@@ -22,9 +22,6 @@ public class NoCrimeFactionAnalyzer : IContextualRecordAnalyzer<INpcGetter>
         // Skip NPCs using templates for factions
         if (npc.Configuration.TemplateFlags.HasFlag(NpcConfiguration.TemplateFlag.Factions)) return;
 
-        // Skip NPCs who don't care about crime
-        if (npc.AIData.Responsibility == Responsibility.NoCrime) return;
-
         if (npc.CrimeFaction.IsNull)
         {
             param.AddTopic(
