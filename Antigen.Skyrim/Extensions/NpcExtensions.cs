@@ -56,7 +56,7 @@ public static class NpcExtensions
     {
         const string JobTrainerPart = "JobTrainer";
 
-        return npc.Factions
+        var skill = npc.Factions
             .Select(x => x.Faction.TryResolve(linkCache))
             .WhereNotNull()
             .Select<IFactionGetter, Skill?>(f =>
@@ -75,10 +75,11 @@ public static class NpcExtensions
                 if (Enum.TryParse<Skill>(specialization, out var actorValue)) return actorValue;
 
                 return null;
-
             })
             .WhereNotNull()
             .FirstOrDefault();
+
+        return skill == 0 ? null : skill;
     }
 
     public static int GetBaseSkillLevel(this INpcGetter npc, Skill skill, ILinkCache linkCache, int iAVDSkillStart = 15)
