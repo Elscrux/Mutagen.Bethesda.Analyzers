@@ -46,6 +46,7 @@ public class NoCleanupScriptAnalyzer : IContextualRecordAnalyzer<INpcGetter>
     {
         var npc = param.Record;
         if (!npc.IsUniqueActorType(param.LinkCache)) return;
+        if (npc.IsGhost()) return;
 
         // Skip NPCs using templates for scripts
         if (npc.Configuration.TemplateFlags.HasFlag(NpcConfiguration.TemplateFlag.Script)) return;

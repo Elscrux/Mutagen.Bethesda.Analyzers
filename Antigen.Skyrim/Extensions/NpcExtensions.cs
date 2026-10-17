@@ -46,6 +46,12 @@ public static class NpcExtensions
         return npc.Configuration.Flags.HasFlag(NpcConfiguration.Flag.Unique);
     }
 
+    public static bool IsGhost(this INpcGetter npc)
+    {
+        return npc.Configuration.Flags.HasFlag(NpcConfiguration.Flag.IsGhost)
+         || (npc.Keywords is not null && npc.Keywords.Contains(FormKeys.SkyrimSE.Skyrim.Keyword.ActorTypeGhost));
+    }
+
     public static Skill? GetTrainerType(this INpcGetter npc, ILinkCache linkCache)
     {
         const string JobTrainerPart = "JobTrainer";
