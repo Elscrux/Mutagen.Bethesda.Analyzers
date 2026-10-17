@@ -72,6 +72,7 @@ public static class NpcExtensions
                 // Extract the specialization part
                 var specialization = f.EditorID[(index + JobTrainerPart.Length)..];
                 specialization = specialization.TrimStringFromEnd("Faction");
+                if (string.Equals(specialization, "Marksman", StringComparison.OrdinalIgnoreCase)) return Skill.Archery; // Handle marksman synonym for archery
                 if (Enum.TryParse<Skill>(specialization, out var actorValue)) return actorValue;
 
                 return null;
@@ -128,5 +129,36 @@ public static class NpcExtensions
             IPcLevelMult => npc.Configuration.CalcMinLevel,
             _ => throw new ArgumentOutOfRangeException()
         };
+    }
+
+    public static IEnumerable<IItemGetter> SampleItems(this INpcGetter npc, ILinkCache linkCache, int level, bool useChanceNone, Random random)
+    {
+        // Handle template npcs
+        if (npc.Configuration.TemplateFlags.HasFlag(NpcConfiguration.TemplateFlag.Inventory) && npc.Template.TryResolve(linkCache, out var template))
+        {
+            return template switch
+            {
+                INpcGetter templateNpc => templateNpc.SampleItems(linkCache, level, useChanceNone, random),
+                ILeveledNpcGetter leveledNpc => leveledNpc.SampleNpc(linkCache, level, random)?
+                        .SampleItems(linkCache, level, useChanceNone, random)
+                 ?? [],
+                _ => []
+            };
+        }
+
+        // Handle regular npcs
+        if (npc.Items is null) return [];
+
+        return npc.Items
+            .SelectMany(entry =>
+            {
+                return entry.Item.Item.TryResolve(linkCache) switch
+                {
+                    ILeveledItemGetter leveledItem => leveledItem.SampleItems(linkCache, level, useChanceNone, random),
+                    {} item => Enumerable.Repeat(item, entry.Item.Count),
+                    _ => []
+                };
+            })
+            .WhereNotNull();
     }
 }
