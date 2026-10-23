@@ -43,9 +43,8 @@ public static class LeveledNpcExtensions
 
                 if (npcPool.Length > 0)
                 {
-                    random.Shuffle(npcPool);
-
-                    return npcPool[0];
+                    var randomIndex = random.Next(0, npcPool.Length);
+                    return npcPool[randomIndex];
                 }
             }
             else

@@ -109,23 +109,18 @@ public static class LeveledItemExtensions
 
                 if (calculateFromAllLevelsLessThanOrEqualPlayer)
                 {
-
                     var itemPool = leveledItem.Entries
                         .Select(e => e.Data)
                         .WhereNotNull()
                         .Where(e => e.Level <= level)
-                        .Select(e => e.Reference.TryResolve(linkCache, out var item) ? item : null)
+                        .Select(GetEntryItems)
                         .WhereNotNull()
-                        .Select(i => i is ILeveledItemGetter nestedLeveledItem
-                            ? nestedLeveledItem.SampleItems(linkCache, level, useChanceNone, random)
-                            : [i])
                         .ToArray();
 
                     if (itemPool.Length > 0)
                     {
-                        random.Shuffle(itemPool);
-
-                        foreach (var item in itemPool[0])
+                        var randomIndex = random.Next(0, itemPool.Length);
+                        foreach (var item in itemPool[randomIndex])
                         {
                             yield return item;
                         }
@@ -137,11 +132,10 @@ public static class LeveledItemExtensions
                     var closestItem = leveledItem.Entries
                         .Where(e => e.Data is not null && e.Data.Level <= level)
                         .OrderByDescending(e => e.Data!.Level)
-                        .Select(e => e.Data!.Reference.TryResolve(linkCache, out var item) ? item : null)
+                        .Select(e => e.Data)
                         .WhereNotNull()
-                        .Select(i => i is ILeveledItemGetter nestedLeveledItem
-                            ? nestedLeveledItem.SampleItems(linkCache, level, useChanceNone, random)
-                            : [i])
+                        .Select(GetEntryItems)
+                        .WhereNotNull()
                         .FirstOrDefault();
 
                     if (closestItem is not null)
@@ -151,6 +145,19 @@ public static class LeveledItemExtensions
                             yield return item;
                         }
                     }
+                }
+
+                IEnumerable<IItemGetter>? GetEntryItems(ILeveledItemEntryDataGetter e)
+                {
+                    if (!e.Reference.TryResolve(linkCache, out var item)) return null;
+
+                    if (item is ILeveledItemGetter nestedLeveledItem)
+                    {
+                        var items = nestedLeveledItem.SampleItems(linkCache, level, useChanceNone, random).ToArray();
+                        return Enumerable.Repeat(items, e.Count).SelectMany(x => x);
+                    }
+
+                    return Enumerable.Repeat(item, e.Count);
                 }
             }
         }
