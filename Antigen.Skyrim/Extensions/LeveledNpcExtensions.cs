@@ -82,6 +82,12 @@ public static class LeveledNpcExtensions
         {
             if (leveledNpc.Entries is null) return 0;
 
+            // If a global is used for chance none
+            if (!leveledNpc.Global.IsNull) return 0;
+
+            // Use the chance none value to reduce the average gold value of the leveled list.
+            var fraction = 1 - leveledNpc.ChanceNone.Value;
+
             // If checked, the level list will use any Npc at or below the player's level in the list.
             // If not checked, it uses the closest Npc or npcs to the player's level, but not exceeding it.
             var calculateFromAllLevelsLessThanOrEqualPlayer = leveledNpc.Flags.HasFlag(LeveledNpc.Flag.CalculateFromAllLevelsLessThanOrEqualPlayer);
@@ -104,7 +110,7 @@ public static class LeveledNpcExtensions
 
                 if (npcPool.Length > 0)
                 {
-                    return npcPool[0];
+                    return (long) (fraction * npcPool[0]);
                 }
             }
             else
@@ -112,7 +118,7 @@ public static class LeveledNpcExtensions
                 if (leveledNpc.Entries.Count == 0) return 0;
 
                 // Find the closest level to the player's level without exceeding it.
-                return leveledNpc.Entries
+                return (long) (fraction * leveledNpc.Entries
                     .Where(e => e.Data is not null && e.Data.Level <= level)
                     .OrderByDescending(e => e.Data!.Level)
                     .Select(e => e.Data!.Reference.TryResolve(linkCache, out var npc) ? npc : null)
@@ -124,7 +130,7 @@ public static class LeveledNpcExtensions
                         _ => 0
                     })
                     .Average()
-                    .Round();
+                    .Round());
             }
 
             return 0;
