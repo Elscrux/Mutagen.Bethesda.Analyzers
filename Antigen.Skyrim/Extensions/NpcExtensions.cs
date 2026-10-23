@@ -54,33 +54,12 @@ public static class NpcExtensions
 
     public static Skill? GetTrainerType(this INpcGetter npc, ILinkCache linkCache)
     {
-        const string JobTrainerPart = "JobTrainer";
+        if (!npc.Class.TryResolve(linkCache, out var npcClass)) return null;
 
-        var skill = npc.Factions
-            .Select(x => x.Faction.TryResolve(linkCache))
-            .WhereNotNull()
-            .Select<IFactionGetter, Skill?>(f =>
-            {
-                if (f.EditorID is null) return null;
+        // A trainer type of 0 means the NPC does not train any skills, so return null in that case
+        if (npcClass.MaxTrainingLevel == 0) return null;
 
-                var index = f.EditorID.IndexOf(JobTrainerPart, StringComparison.OrdinalIgnoreCase);
-                if (index < 0) return null;
-
-                // If the EditorID ends with "JobTrainer", it is not a specialization
-                if (index + JobTrainerPart.Length >= f.EditorID.Length) return null;
-
-                // Extract the specialization part
-                var specialization = f.EditorID[(index + JobTrainerPart.Length)..];
-                specialization = specialization.TrimStringFromEnd("Faction");
-                if (string.Equals(specialization, "Marksman", StringComparison.OrdinalIgnoreCase)) return Skill.Archery; // Handle marksman synonym for archery
-                if (Enum.TryParse<Skill>(specialization, out var actorValue)) return actorValue;
-
-                return null;
-            })
-            .WhereNotNull()
-            .FirstOrDefault();
-
-        return skill == 0 ? null : skill;
+        return npcClass.Teaches;
     }
 
     public static int GetBaseSkillLevel(this INpcGetter npc, Skill skill, ILinkCache linkCache, int iAVDSkillStart = 15)
