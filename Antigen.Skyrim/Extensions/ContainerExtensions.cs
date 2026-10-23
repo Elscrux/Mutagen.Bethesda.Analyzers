@@ -1,4 +1,5 @@
-﻿using Mutagen.Bethesda.Plugins.Cache;
+﻿using Mutagen.Bethesda.Plugins.Aspects;
+using Mutagen.Bethesda.Plugins.Cache;
 using Mutagen.Bethesda.Skyrim;
 using Noggog;
 
@@ -23,6 +24,23 @@ public static class ContainerExtensions
                     };
                 })
                 .WhereNotNull();
+        }
+
+        public long GetAverageGoldValue(ILinkCache linkCache, int level)
+        {
+            if (container.Items is null) return 0;
+
+            return container.Items
+                .Select(entry =>
+                {
+                    return entry.Item.Item.TryResolve(linkCache) switch
+                    {
+                        ILeveledItemGetter leveledItem => leveledItem.GetAverageGoldValue(linkCache, level),
+                        {} item => ((item as IWeightValueGetter)?.Value ?? 0) * entry.Item.Count,
+                        _ => 0
+                    };
+                })
+                .Sum();
         }
     }
 }

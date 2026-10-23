@@ -1,4 +1,5 @@
-﻿using Mutagen.Bethesda.Plugins.Cache;
+﻿using Mutagen.Bethesda.Plugins.Aspects;
+using Mutagen.Bethesda.Plugins.Cache;
 using Mutagen.Bethesda.Plugins.Records;
 using Mutagen.Bethesda.Skyrim;
 using Noggog;
@@ -151,6 +152,63 @@ public static class LeveledItemExtensions
                         }
                     }
                 }
+            }
+        }
+
+        /// <summary>
+        /// Sample items from the leveled list based on the provided level.
+        /// </summary>
+        /// <param name="linkCache">The link cache used to resolve form links.</param>
+        /// <param name="level">The level at which to sample items from the leveled list.</param>
+        /// <returns>An enumerable of item getters representing the sampled items from the leveled list.</returns>
+        public long GetAverageGoldValue(ILinkCache linkCache, int level)
+        {
+            if (leveledItem.Entries is null) return 0;
+
+            // If a global is used for chance none
+            if (!leveledItem.Global.IsNull) return 0;
+
+            // Use the chance none value to reduce the average gold value of the leveled list.
+            var fraction = 1 - leveledItem.ChanceNone.Value;
+
+            // Use All causes the list to always return all of its contents.
+            var useAll = leveledItem.Flags.HasFlag(LeveledItem.Flag.UseAll);
+            if (useAll) return (long) (fraction * leveledItem.Entries.Sum(GetEntryValue));
+
+            // If checked, the level list will use any item at or below the player's level in the list.
+            // If not checked, it uses the closest item or items to the player's level, but not exceeding it.
+            var calculateFromAllLevelsLessThanOrEqualPlayer = leveledItem.Flags.HasFlag(LeveledItem.Flag.CalculateFromAllLevelsLessThanOrEqualPlayer);
+            if (calculateFromAllLevelsLessThanOrEqualPlayer)
+            {
+                var itemPool = leveledItem.Entries
+                    .Where(e => e.Data?.Level <= level)
+                    .Select(GetEntryValue)
+                    .ToArray();
+
+                if (itemPool.Length == 0) return 0;
+
+                return (long) (fraction * itemPool.Average().Round());
+            }
+
+            // Find the closest level to the player's level without exceeding it.
+            return (long) (fraction * leveledItem.Entries
+                .Where(e => e.Data is not null && e.Data.Level <= level)
+                .OrderByDescending(e => e.Data!.Level)
+                .Select(GetEntryValue)
+                .FirstOrDefault());
+
+            long GetEntryValue(ILeveledItemEntryGetter? e)
+            {
+                if (e?.Data is null || !e.Data.Reference.TryResolve(linkCache, out var item)) return 0;
+
+                var value = item switch
+                {
+                    ILeveledItemGetter nestedLeveledItem => nestedLeveledItem.GetAverageGoldValue(linkCache, level),
+                    IWeightValueGetter weightValueItem => weightValueItem.Value,
+                    _ => 0
+                };
+
+                return (long) (fraction * value * e.Data.Count);
             }
         }
     }

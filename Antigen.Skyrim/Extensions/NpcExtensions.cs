@@ -1,4 +1,5 @@
 ﻿using Mutagen.Bethesda.Plugins;
+using Mutagen.Bethesda.Plugins.Aspects;
 using Mutagen.Bethesda.Plugins.Cache;
 using Mutagen.Bethesda.Skyrim;
 using Noggog;
@@ -139,5 +140,34 @@ public static class NpcExtensions
                 };
             })
             .WhereNotNull();
+    }
+
+    public static long GetAverageGoldValue(this INpcGetter npc, ILinkCache linkCache, int level)
+    {
+        // Handle template npcs
+        if (npc.Configuration.TemplateFlags.HasFlag(NpcConfiguration.TemplateFlag.Inventory) && npc.Template.TryResolve(linkCache, out var template))
+        {
+            return template switch
+            {
+                INpcGetter templateNpc => templateNpc.GetAverageGoldValue(linkCache, level),
+                ILeveledNpcGetter leveledNpc => leveledNpc.GetAverageGoldValue(linkCache, level),
+                _ => 0
+            };
+        }
+
+        // Handle regular npcs
+        if (npc.Items is null) return 0;
+
+        return npc.Items
+            .Select(entry =>
+            {
+                return entry.Item.Item.TryResolve(linkCache) switch
+                {
+                    ILeveledItemGetter leveledItem => leveledItem.GetAverageGoldValue(linkCache, level),
+                    IWeightValueGetter item => item.Value * entry.Item.Count,
+                    _ => 0
+                };
+            })
+            .Sum();
     }
 }

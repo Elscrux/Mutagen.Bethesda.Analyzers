@@ -2,7 +2,6 @@
 using Antigen.SDK.Topics;
 using Mutagen.Bethesda.Plugins.Aspects;
 using Mutagen.Bethesda.Skyrim;
-using Noggog;
 
 namespace Antigen.Skyrim.Record.Cell.Interior;
 
@@ -25,8 +24,6 @@ public sealed class LootAmountAnalyzer : IContextualRecordAnalyzer<ICellGetter>
         if (cell.IsExteriorCell()) return;
 
         const int levelToSampleAt = 10;
-        const bool useChanceNone = true;
-        const int sampleAmount = 20;
 
         var results = cell.GetAllPlaced(param.LinkCache)
             .Select<IPlacedGetter, (string? Item, long Value)>(placed =>
@@ -42,29 +39,26 @@ public sealed class LootAmountAnalyzer : IContextualRecordAnalyzer<ICellGetter>
                                         // A non-leveled item is placed, use the gold value of the base object
                                         return (baseObject.EditorID, weightValue.Value);
                                     case IContainerGetter container:
-                                        return (container.EditorID, Enumerable.Range(0, sampleAmount)
-                                            .Select(_ => container.SampleItems(param.LinkCache, levelToSampleAt, useChanceNone, new Random()).GetTotalGoldValue())
-                                            .Average()
-                                            .Round());
+                                        var averageGoldAmount = container.GetAverageGoldValue(param.LinkCache, levelToSampleAt);
+
+                                        return (container.EditorID, averageGoldAmount);
                                 }
                             }
                         }
                         else if (placedObject.LeveledItemBaseObject.TryResolve(param.LinkCache, out var leveledItem))
                         {
                             // A leveled list is used to determine which item is placed, use the gold value of the leveled list
-                            return (leveledItem.EditorID, Enumerable.Range(0, sampleAmount)
-                                .Select(_ => leveledItem.SampleItems(param.LinkCache, levelToSampleAt, useChanceNone, new Random()).GetTotalGoldValue())
-                                .Average()
-                                .Round());
+                            var averageGoldAmount = leveledItem.GetAverageGoldValue(param.LinkCache, levelToSampleAt);
+
+                            return (leveledItem.EditorID, averageGoldAmount);
                         }
                         break;
                     case IPlacedNpcGetter placedNpc:
                         if (placedNpc.Base.TryResolve(param.LinkCache, out var npc))
                         {
-                            return (npc.EditorID, Enumerable.Range(0, sampleAmount)
-                                .Select(_ => npc.SampleItems(param.LinkCache, levelToSampleAt, useChanceNone, new Random()).GetTotalGoldValue())
-                                .Average()
-                                .Round());
+                            var averageGoldAmount = npc.GetAverageGoldValue(param.LinkCache, levelToSampleAt);
+
+                            return (npc.EditorID, averageGoldAmount);
                         }
                         break;
                 }
