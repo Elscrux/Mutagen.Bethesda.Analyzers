@@ -19,7 +19,7 @@ public sealed class PlayerActivatorAnalyzerTest
         mod.Activators.Add(activator);
 
         placed.Base.SetTo(activator);
-        placed.CollisionLayer = 15; // L_NONCOLLIDABLE, the player activator collision layer
+        placed.CollisionLayer = PlayerActivatorAnalyzer.L_NONCOLLIDABLE;
         placed.Primitive = new PlacedPrimitive { Type = primitiveType };
         placed.Placement = new Placement { Rotation = rotation };
         return activator;

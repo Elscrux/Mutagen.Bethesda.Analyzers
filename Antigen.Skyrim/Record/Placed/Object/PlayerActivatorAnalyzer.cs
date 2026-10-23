@@ -6,6 +6,8 @@ namespace Antigen.Skyrim.Record.Placed.Object;
 
 public sealed class PlayerActivatorAnalyzer: IContextualRecordAnalyzer<IPlacedObjectGetter>
 {
+    public const uint L_NONCOLLIDABLE = 15; // L_NONCOLLIDABLE, the player activator collision layer
+
     public static readonly TopicDefinition InvalidRotation = MutagenTopicBuilder.FromDiscussion(
             652,
             "Player Activator with Invalid Rotation",
@@ -25,7 +27,8 @@ public sealed class PlayerActivatorAnalyzer: IContextualRecordAnalyzer<IPlacedOb
         var placedObject = param.Record;
 
         if (!placedObject.CollisionLayer.HasValue) return;
-        if (placedObject.CollisionLayer.Value != 15) return; // 15 is L_NONCOLLIDABLE, the player activator collision layer
+
+        if (placedObject.CollisionLayer.Value != L_NONCOLLIDABLE) return;
         if (placedObject.Primitive is null) return;
         if (placedObject.Primitive.Type == PlacedPrimitive.TypeEnum.None) return;
 
@@ -37,13 +40,11 @@ public sealed class PlayerActivatorAnalyzer: IContextualRecordAnalyzer<IPlacedOb
                 MissingName.Format());
         }
 
-        if (placedObject.Primitive.Type == PlacedPrimitive.TypeEnum.Box)
+        if (placedObject.Primitive.Type == PlacedPrimitive.TypeEnum.Box
+         && placedObject.Placement is { Rotation: { X: 0, Y: 0, Z: 0 } })
         {
-            if (placedObject.Placement is { Rotation: { X: 0, Y: 0, Z: 0 } })
-            {
-                param.AddTopic(
-                    InvalidRotation.Format());
-            }
+            param.AddTopic(
+                InvalidRotation.Format());
         }
     }
 
